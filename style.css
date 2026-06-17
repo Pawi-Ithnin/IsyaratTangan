@@ -1,0 +1,74 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+p {
+    color: #666;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.container {
+    position: relative;
+    width: 640px;
+    height: 480px;
+    background-color: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+#webcam {
+    display: none;
+}
+
+#output_canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1); /* Efek cermin */
+}
+
+.result-box {
+    margin-top: 20px;
+    background-color: #ffffff;
+    padding: 15px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.result-label {
+    font-size: 14px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#text-output {
+    font-size: 48px;
+    font-weight: bold;
+    color: #007bff;
+    margin-top: 5px;
+}
+
+.status {
+    font-size: 14px;
+    color: #28a745;
+    margin-top: 10px;
+    font-weight: 500;
+}
