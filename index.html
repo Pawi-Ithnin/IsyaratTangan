@@ -1,13 +1,31 @@
-<h1>Pengesan Bahasa Isyarat Malaysia (BIM)</h1>
-<p>Angkat tangan anda dan tunjukkan angka 1 hingga 5 di hadapan kamera.</p>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengesan Bahasa Isyarat Malaysia (BIM)</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
-<div class="container">
-    <video id="webcam" autoplay playsinline></video>
-    <canvas id="output_canvas" width="640" height="480"></canvas>
-</div>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-<div class="result-box">
-    <div class="result-label">Teks Output</div>
-    <div id="text-output">...</div>
-    <div id="status-message" class="status">Memulakan kamera...</div>
-</div>
+    <h1>Pengesan Bahasa Isyarat Malaysia (BIM)</h1>
+    <p>Angkat tangan anda dan tunjukkan angka 1 hingga 10 di hadapan kamera.</p>
+
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output_canvas" width="640" height="480"></canvas>
+    </div>
+
+    <div class="result-box">
+        <div class="result-label">Teks Output</div>
+        <div id="text-output">...</div>
+        <div id="status-message" class="status">Memulakan kamera...</div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
