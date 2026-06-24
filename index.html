@@ -6,14 +6,87 @@
     <title>Pengesan Bahasa Isyarat Malaysia (BIM)</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
 
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        p {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #7f8c8d;
+        }
+        .container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            background: #2c3e50;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        #webcam {
+            position: absolute;
+            width: 640px;
+            height: 480px;
+            transform: rotateY(180deg);
+            display: none;
+        }
+        #output_canvas {
+            position: absolute;
+            width: 640px;
+            height: 480px;
+            transform: rotateY(180deg);
+        }
+        .result-box {
+            margin-top: 25px;
+            text-align: center;
+            width: 640px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .result-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #95a5a6;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #text-output {
+            font-size: 48px;
+            font-weight: 800;
+            color: #3498db;
+            margin-bottom: 10px;
+            min-height: 58px;
+        }
+        .status {
+            font-size: 15px;
+            color: #e67e22;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
 
     <h1>Pengesan Bahasa Isyarat Malaysia (BIM)</h1>
-    <p>Angkat tangan anda dan tunjukkan angka 1 hingga 10 di hadapan kamera.</p>
+    <p>Gunakan isyarat tangan di zon bebas untuk Angka, zon muka untuk "MAKAN", atau zon dada untuk "SAYA".</p>
 
     <div class="container">
         <video id="webcam" autoplay playsinline></video>
@@ -26,6 +99,206 @@
         <div id="status-message" class="status">Memulakan kamera...</div>
     </div>
 
-    <script src="script.js"></script>
+<script>
+const videoElement = document.getElementById('webcam');
+const canvasElement = document.getElementById('output_canvas');
+const canvasCtx = canvasElement.getContext('2d');
+const textOutput = document.getElementById('text-output');
+const statusMessage = document.getElementById('status-message');
+
+// 1. LOGIK PEMETAAN ANGKA & PERKATAAN (BIM) - BERASASKAN ZON RUANG
+function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks, faceLandmarks) {
+    // Gunakan mana-mana tangan yang dikesan (Utamakan tangan kanan)
+    let landmarks = rightHandLandmarks || leftHandLandmarks;
+    
+    if (!landmarks) return "...";
+
+    // Ambil titik rujukan rupa bentuk fizikal tangan
+    let hujungTelunjuk = landmarks[8];
+    let saizTangan = Math.sqrt(Math.pow(landmarks[5].x - landmarks[17].x, 2) + Math.pow(landmarks[5].y - landmarks[17].y, 2));
+
+    // =================================================================
+    // ZON 1: ZON MUKA & KEPALA (Isyarat: MAKAN)
+    // =================================================================
+    if (faceLandmarks && faceLandmarks.length > 13) {
+        let mulut = faceLandmarks[13]; 
+        let jarakKeMulut = Math.sqrt(Math.pow(hujungTelunjuk.x - mulut.x, 2) + Math.pow(hujungTelunjuk.y - mulut.y, 2));
+
+        // Jika pergelangan/hujung jari berada dalam radius lingkungan muka
+        if (jarakKeMulut < (saizTangan * 1.4)) {
+            return "MAKAN"; 
+        }
+    }
+
+    // =================================================================
+    // ZON 2: ZON BADAN & DADA (Isyarat: SAYA) - DIKEMAS KINI
+    // =================================================================
+    if (poseLandmarks && poseLandmarks.length > 12) {
+        let bahuKanan = poseLandmarks[11];
+        let bahuKiri = poseLandmarks[12];
+
+        // Membina sempadan kotak dada berdasarkan kedudukan kedua-dua bahu
+        let sempadanKiri = Math.min(bahuKanan.x, bahuKiri.x) - 0.05;
+        let sempadanKanan = Math.max(bahuKanan.x, bahuKiri.x) + 0.05;
+        let sempadanAtas = Math.min(bahuKanan.y, bahuKiri.y) - 0.02;
+        let sempadanBawah = Math.max(bahuKanan.y, bahuKiri.y) + 0.25;
+
+        // Semak jika hujung jari telunjuk berada di dalam kotak dada tersebut
+        let diKawasanDada = (hujungTelunjuk.x >= sempadanKiri && hujungTelunjuk.x <= sempadanKanan) &&
+                            (hujungTelunjuk.y >= sempadanAtas && hujungTelunjuk.y <= sempadanBawah);
+
+        if (diKawasanDada) {
+            let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
+            let tengahTerbuka = landmarks[12].y < landmarks[10].y;
+            
+            // Pengesanan isyarat SAYA (Telunjuk menunjuk ke dada sendiri)
+            if (telunjukTerbuka && !tengahTerbuka) {
+                return "SAYA";
+            }
+            return "..."; // Mengelakkan angka dipaparkan ketika tangan di kawasan dada
+        }
+    }
+
+    // =================================================================
+    // ZON 3: ZON BEBAS / NEUTRAL (Hanya Baca Angka 1 - 10 Di Sini)
+    // =================================================================
+    let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
+    let tengahTerbuka = landmarks[12].y < landmarks[10].y;
+    let manisTerbuka = landmarks[16].y < landmarks[14].y;
+    let kelingkingTerbuka = landmarks[20].y < landmarks[18].y;
+
+    let jarakIbuJariKeTelunjuk = Math.abs(landmarks[4].x - landmarks[5].x);
+    let ibuJariTerbuka = landmarks[4].y < landmarks[5].y || jarakIbuJariKeTelunjuk > 0.1;
+
+    // ANGKA 1
+    if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) return "1";
+    
+    // ANGKA 2
+    if (telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) return "2";
+    
+    // ANGKA 3 & 8 (BIM)
+    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
+        if (jarakIbuJariKeTelunjuk > 0.16) return "8";
+        return "3"; 
+    }
+    
+    // ANGKA 4
+    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) return "4";
+    
+    // ANGKA 5
+    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka) return "5";
+
+    // ANGKA 6
+    if (ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "6";
+
+    // ANGKA 7
+    if (ibuJariTerbuka && telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "7";
+
+    // ANGKA 9
+    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && !kelingkingTerbuka) return "9";
+    
+    // ANGKA 10
+    if (!ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
+        return "10 (Genggam & Goyang)";
+    }
+
+    return "...";
+}
+
+// 2. FUNGSI PENGENDALI HASIL PENGESANAN (HOLISTIC)
+function onResults(results) {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.poseLandmarks || results.leftHandLandmarks || results.rightHandLandmarks) {
+        statusMessage.innerText = "Sistem Aktif: Mengesan Isyarat...";
+        statusMessage.style.color = "#28a745";
+
+        // LUKIS MUKA
+        if (results.faceLandmarks) {
+            drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#C0C0C050', lineWidth: 1});
+        }
+        
+        // LUKIS RANGKA BADAN (POSE)
+        if (results.poseLandmarks) {
+            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#2ecc71', lineWidth: 2});
+            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#e74c3c', lineWidth: 1, radius: 2});
+        }
+        
+        // LUKIS TANGAN KIRI
+        if (results.leftHandLandmarks) {
+            drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#e67e22', lineWidth: 2});
+            drawLandmarks(canvasCtx, results.leftHandLandmarks, {color: '#2ecc71', lineWidth: 1, radius: 3});
+        }
+        
+        // LUKIS TANGAN KANAN
+        if (results.rightHandLandmarks) {
+            drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#9b59b6', lineWidth: 2});
+            drawLandmarks(canvasCtx, results.rightHandLandmarks, {color: '#2ecc71', lineWidth: 1, radius: 3});
+        }
+
+        // Jalankan tekaan isyarat BIM bersama parameter faceLandmarks
+        const hasilBIM = tekaAngkaBIM(
+            results.leftHandLandmarks, 
+            results.rightHandLandmarks, 
+            results.poseLandmarks, 
+            results.faceLandmarks
+        );
+        textOutput.innerText = hasilBIM;
+
+    } else {
+        statusMessage.innerText = "Sila pastikan badan/tangan anda kelihatan pada kamera.";
+        statusMessage.style.color = "#dc3545";
+        textOutput.innerText = "...";
+    }
+    canvasCtx.restore();
+}
+
+// 3. CONFIGURATION MEDIAPIPE HOLISTIC
+const holistic = new Holistic({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
+});
+
+holistic.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+holistic.onResults(onResults);
+
+// 4. AKSES & KAWALAN KAMERA (WEBRTC STANDARD)
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+    .then(function(stream) {
+        videoElement.srcObject = stream;
+        videoElement.onloadedmetadata = function(e) {
+            videoElement.play();
+            statusMessage.innerText = "Kamera sedia. Sila lakukan isyarat.";
+            statusMessage.style.color = "#3498db";
+            
+            async function hantarFrame() {
+                if (!videoElement.paused && !videoElement.ended) {
+                    await holistic.send({ image: videoElement });
+                }
+                requestAnimationFrame(hantarFrame);
+            }
+            hantarFrame();
+        };
+    })
+    .catch(function(err) {
+        statusMessage.innerText = "Gagal mengakses kamera: " + err.message;
+        statusMessage.style.color = "#dc3545";
+    });
+} else {
+    statusMessage.innerText = "Browser anda tidak menyokong akses kamera.";
+    statusMessage.style.color = "#dc3545";
+}
+</script>
+
 </body>
 </html>
+
+```
