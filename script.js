@@ -1,99 +1,93 @@
-const videoElement = document.getElementById('webcam');
-const canvasElement = document.getElementById('output_canvas');
-const canvasCtx = canvasElement.getContext('2d');
-const textOutput = document.getElementById('text-output');
-const statusMessage = document.getElementById('status-message');
+// 1. LOGIK PEMETAAN ANGKA & PERKATAAN (BIM) - BERASASKAN ZON RUANG
+function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks, faceLandmarks) {
+    // Pilih tangan yang aktif (Utamakan tangan kanan)
+    let landmarks = rightHandLandmarks || leftHandLandmarks;
+    
+    if (!landmarks) return "...";
 
-function tekaAngkaBIM(landmarks) {
+    // Ambil titik rujukan penting untuk tangan
+    let hujungTelunjuk = landmarks[8];
+    let saizTangan = Math.sqrt(Math.pow(landmarks[5].x - landmarks[17].x, 2) + Math.pow(landmarks[5].y - landmarks[17].y, 2));
+
+    // =================================================================
+    // ZON 1: ZON MUKA & KEPALA (Contoh: MAKAN)
+    // =================================================================
+    if (faceLandmarks && faceLandmarks.length > 13) {
+        let mulut = faceLandmarks[13]; 
+        let jarakKeMulut = Math.sqrt(Math.pow(hujungTelunjuk.x - mulut.x, 2) + Math.pow(hujungTelunjuk.y - mulut.y, 2));
+
+        // Jika tangan berada dalam lingkungan zon muka/mulut
+        if (jarakKeMulut < (saizTangan * 1.4)) {
+            // Letakkan semua isyarat berkaitan muka di sini
+            return "MAKAN"; 
+        }
+    }
+
+    // =================================================================
+    // ZON 2: ZON BADAN & DADA (Contoh: SAYA)
+    // =================================================================
+    // =================================================================
+    // ZON 2: ZON BADAN & DADA (Isyarat: SAYA) - DIBAIKI
+    // =================================================================
+    if (poseLandmarks && poseLandmarks.length > 12) {
+        let bahuKanan = poseLandmarks[11];
+        let bahuKiri = poseLandmarks[12];
+
+        // Tentukan sempadan kotak dada (Kiri, Kanan, Atas, Bawah)
+        let sempadanKiri = Math.min(bahuKanan.x, bahuKiri.x) - 0.05;
+        let sempadanKanan = Math.max(bahuKanan.x, bahuKiri.x) + 0.05;
+        let sempadanAtas = Math.min(bahuKanan.y, bahuKiri.y) - 0.02;
+        let sempadanBawah = Math.max(bahuKanan.y, bahuKiri.y) + 0.25; // Anggaran jarak ke bawah dada
+
+        // Semak adakah hujung telunjuk (landmarks[8]) berada DI DALAM kotak dada ini
+        let diKawasanDada = (hujungTelunjuk.x >= sempadanKiri && hujungTelunjuk.x <= sempadanKanan) &&
+                            (hujungTelunjuk.y >= sempadanAtas && hujungTelunjuk.y <= sempadanBawah);
+
+        if (diKawasanDada) {
+            let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
+            let tengahTerbuka = landmarks[12].y < landmarks[10].y;
+            
+            // Dalam BIM, isyarat "SAYA" boleh menggunakan telunjuk lurus menunjuk ke dada
+            if (telunjukTerbuka && !tengahTerbuka) {
+                return "SAYA";
+            }
+            return "..."; // Sekat angka lain di kawasan dada
+        }
+    }
+    
+
+    // =================================================================
+    // ZON 3: ZON BEBAS / NEUTRAL (Hanya Baca Angka 1 - 10 Di Sini)
+    // =================================================================
+    
+    // Status bukaan jari
     let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
     let tengahTerbuka = landmarks[12].y < landmarks[10].y;
     let manisTerbuka = landmarks[16].y < landmarks[14].y;
     let kelingkingTerbuka = landmarks[20].y < landmarks[18].y;
-    let ibuJariTerbuka = landmarks[4].y < landmarks[5].y || Math.abs(landmarks[4].x - landmarks[5].x) > 0.1;
 
+    let jarakIbuJariKeTelunjuk = Math.abs(landmarks[4].x - landmarks[5].x);
+    let ibuJariTerbuka = landmarks[4].y < landmarks[5].y || jarakIbuJariKeTelunjuk > 0.1;
+
+    // Logik Angka 1
     if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) return "1";
+    
+    // Logik Angka 2
     if (telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) return "2";
-    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "3 / 8 (BIM)"; 
+    
+    // Logik Angka 3 & 8
+    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
+        if (jarakIbuJariKeTelunjuk > 0.16) return "8";
+        return "3"; 
+    }
+    
+    // Logik Angka 4-10
     if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) return "4";
     if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka) return "5";
     if (ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "6";
     if (ibuJariTerbuka && telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "7";
     if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && !kelingkingTerbuka) return "9";
-    if (!ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "10";
+    if (!ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "10 (Genggam & Goyang)";
 
     return "...";
-}
-
-function lukisTangan(landmarks) {
-    canvasCtx.fillStyle = '#007bff';
-    canvasCtx.strokeStyle = '#ffffff';
-    canvasCtx.lineWidth = 2;
-    const sambungan = [
-        [0,1], [1,2], [2,3], [3,4], [0,5], [5,6], [6,7], [7,8],
-        [5,9], [9,10], [10,11], [11,12], [9,13], [13,14], [14,15], [15,16],
-        [13,17], [17,18], [18,19], [19,20], [0,17]
-    ];
-    sambungan.forEach(([a, b]) => {
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(landmarks[a].x * canvasElement.width, landmarks[a].y * canvasElement.height);
-        canvasCtx.lineTo(landmarks[b].x * canvasElement.width, landmarks[b].y * canvasElement.height);
-        canvasCtx.stroke();
-    });
-    for (let i = 0; i < landmarks.length; i++) {
-        const x = landmarks[i].x * canvasElement.width;
-        const y = landmarks[i].y * canvasElement.height;
-        canvasCtx.beginPath();
-        canvasCtx.arc(x, y, 5, 0, 2 * Math.PI);
-        canvasCtx.fill();
-    }
-}
-
-function onResults(results) {
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        statusMessage.innerText = "Tangan dikesan!";
-        statusMessage.style.color = "#28a745";
-        const landmarks = results.multiHandLandmarks[0];
-        lukisTangan(landmarks);
-        textOutput.innerText = tekaAngkaBIM(landmarks);
-    } else {
-        statusMessage.innerText = "Sila tunjukkan tangan anda pada kamera.";
-        statusMessage.style.color = "#dc3545";
-        textOutput.innerText = "...";
-    }
-    canvasCtx.restore();
-}
-
-const hands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-hands.onResults(onResults);
-
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-    .then(function(stream) {
-        videoElement.srcObject = stream;
-        videoElement.onloadedmetadata = function() {
-            videoElement.play();
-            statusMessage.innerText = "Kamera sedia. Sila buat isyarat angka 1-10.";
-            async function hantarFrame() {
-                if (!videoElement.paused && !videoElement.ended) {
-                    await hands.send({ image: videoElement });
-                }
-                requestAnimationFrame(hantarFrame);
-            }
-            hantarFrame();
-        };
-    })
-    .catch(function(err) {
-        statusMessage.innerText = "Gagal mengakses kamera: " + err.message;
-        statusMessage.style.color = "#dc3545";
-    });
-} else {
-    statusMessage.innerText = "Browser anda tidak menyokong akses kamera.";
-    statusMessage.style.color = "#dc3545";
 }
