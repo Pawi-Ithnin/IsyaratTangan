@@ -10,83 +10,154 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
 
     <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --primary-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success-color: #34d399;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin: 0;
-            padding: 20px;
-            color: #333;
+            box-sizing: border-box;
         }
+
         h1 {
-            margin-bottom: 5px;
-            color: #2c3e50;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            text-align: center;
         }
+
         p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
             margin-top: 0;
-            margin-bottom: 20px;
-            color: #7f8c8d;
+            margin-bottom: 28px;
+            text-align: center;
         }
+
         .container {
             position: relative;
-            width: 640px;
-            height: 480px;
-            background: #2c3e50;
-            border-radius: 12px;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 4 / 3;
+            background-color: #0b0f19;
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5),
+                        0 0 30px rgba(56, 189, 248, 0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+
+        .container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6),
+                        0 0 40px rgba(56, 189, 248, 0.25);
+        }
+
         #webcam {
-            position: absolute;
-            width: 640px;
-            height: 480px;
-            transform: rotateY(180deg);
             display: none;
         }
+
         #output_canvas {
             position: absolute;
-            width: 640px;
-            height: 480px;
-            transform: rotateY(180deg);
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* Efek cermin */
+            object-fit: cover;
         }
+
         .result-box {
-            margin-top: 25px;
+            margin-top: 24px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            padding: 20px 48px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             text-align: center;
-            width: 640px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            min-width: 240px;
+            max-width: 640px;
+            width: 100%;
+            box-sizing: border-box;
         }
+
         .result-label {
-            font-size: 14px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #95a5a6;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        #text-output {
-            font-size: 48px;
-            font-weight: 800;
-            color: #3498db;
-            margin-bottom: 10px;
-            min-height: 58px;
-        }
-        .status {
-            font-size: 15px;
-            color: #e67e22;
+            letter-spacing: 2px;
             font-weight: 600;
+        }
+
+        #text-output {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 4px;
+            line-height: 1.1;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+            min-height: 60px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: var(--success-color);
+            margin-top: 14px;
+            font-weight: 600;
+            background: rgba(52, 211, 153, 0.1);
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+
+        .status::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
         }
     </style>
 </head>
 <body>
 
     <h1>Pengesan Bahasa Isyarat Malaysia (BIM)</h1>
-    <p>Gunakan isyarat tangan di zon bebas untuk Angka/Huruf atau zon dada untuk "SAYA".</p>
+    <p>Gunakan isyarat tangan di zon bebas untuk Angka (1-10) atau zon dada untuk "SAYA".</p>
 
     <div class="container">
         <video id="webcam" autoplay playsinline></video>
@@ -106,7 +177,7 @@ const canvasCtx = canvasElement.getContext('2d');
 const textOutput = document.getElementById('text-output');
 const statusMessage = document.getElementById('status-message');
 
-// 1. LOGIK PEMETAAN ANGKA, HURUF & PERKATAAN (BIM)
+// 1. LOGIK PEMETAAN ANGKA & PERKATAAN (BIM)
 function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     let landmarks = rightHandLandmarks || leftHandLandmarks;
     
@@ -117,7 +188,7 @@ function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     if (saizTangan === 0) saizTangan = 0.1;
 
     // =================================================================
-    // ZON 1: ZON BADAN & DADA (Contoh: SAYA)
+    // ZON 1: ZON BADAN & DADA (Isyarat: SAYA)
     // =================================================================
     if (poseLandmarks && poseLandmarks.length > 12) {
         let bahuKanan = poseLandmarks[11];
@@ -143,7 +214,7 @@ function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     }
 
     // =================================================================
-    // ZON 2: ZON BEBAS / NEUTRAL (Angka 1-10 & Huruf A-E)
+    // ZON 2: ZON BEBAS / NEUTRAL (Angka 1-10)
     // =================================================================
     let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
     let tengahTerbuka = landmarks[12].y < landmarks[10].y;
@@ -151,55 +222,47 @@ function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     let kelingkingTerbuka = landmarks[20].y < landmarks[18].y;
 
     let jarakIbuJariKeTelunjuk = Math.abs(landmarks[4].x - landmarks[5].x) / saizTangan;
-    let ibuJariTerbuka = landmarks[4].y < landmarks[5].y || jarakIbuJariKeTelunjuk > 0.45; 
-    
+    let ibuJariTerbuka = landmarks[4].y < landmarks[5].y || jarakIbuJariKeTelunjuk > 0.45;  
+
     let minX = Math.min(landmarks[5].x, landmarks[17].x);
     let maxX = Math.max(landmarks[5].x, landmarks[17].x);
     let ibuJariMelipatDiDepan = landmarks[4].x > minX && landmarks[4].x < maxX;
 
     // -----------------------------------------------------------------
-    // LOGIK HURUF (A, B, C, D, E)
-    // -----------------------------------------------------------------
-    if (!telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && ibuJariTerbuka && !ibuJariMelipatDiDepan) {
-        return "A";
-    }
-
-    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && ibuJariMelipatDiDepan) {
-        return "B";
-    }
-
-    let jarakHujungKeIbuJari = Math.sqrt(Math.pow(landmarks[8].x - landmarks[4].x, 2) + Math.pow(landmarks[8].y - landmarks[4].y, 2)) / saizTangan;
-    if (telunjukTerbuka && !manisTerbuka && !kelingkingTerbuka && jarakHujungKeIbuJari > 0.3 && jarakHujungKeIbuJari < 0.8) {
-        if (landmarks[8].y > landmarks[7].y && landmarks[4].y > landmarks[3].y) {
-            return "C";
-        }
-    }
-
-    if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && ibuJariMelipatDiDepan) {
-        return "D";
-    }
-
-    let kukuDiBawahKnuckle = landmarks[8].y > landmarks[6].y && landmarks[12].y > landmarks[10].y;
-    if (kukuDiBawahKnuckle && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && ibuJariMelipatDiDepan) {
-        return "E";
-    }
-
-    // -----------------------------------------------------------------
     // LOGIK ANGKA (1 - 10)
     // -----------------------------------------------------------------
-    if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariMelipatDiDepan) return "1";
-    if (telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) return "2";
+    if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariMelipatDiDepan) {
+        return "1";
+    }
+    
+    if (telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) {
+        return "2";
+    }
     
     if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
         if (jarakIbuJariKeTelunjuk > 0.8) return "8";
         return "3"; 
     }
     
-    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) return "4";
-    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka) return "5";
-    if (ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "6";
-    if (ibuJariTerbuka && telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) return "7";
-    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && !kelingkingTerbuka) return "9";
+    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) {
+        return "4";
+    }
+
+    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka) {
+        return "5";
+    }
+
+    if (ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
+        return "6";
+    }
+
+    if (ibuJariTerbuka && telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
+        return "7";
+    }
+
+    if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && !kelingkingTerbuka) {
+        return "9";
+    }
     
     if (!ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
         return "10 (Genggam & Goyang)";
@@ -216,25 +279,25 @@ function onResults(results) {
 
     if (results.poseLandmarks || results.leftHandLandmarks || results.rightHandLandmarks) {
         statusMessage.innerText = "Sistem Aktif: Mengesan Isyarat...";
-        statusMessage.style.color = "#28a745";
+        statusMessage.style.color = "#34d399";
 
         if (results.faceLandmarks) {
-            drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#C0C0C050', lineWidth: 1});
+            drawConnectors(canvasCtx, results.faceLandmarks, FACEMESH_TESSELATION, {color: '#C0C0C020', lineWidth: 1});
         }
         
         if (results.poseLandmarks) {
-            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#2ecc71', lineWidth: 2});
-            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#e74c3c', lineWidth: 1, radius: 2});
+            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#34d399', lineWidth: 2});
+            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ef4444', lineWidth: 1, radius: 2});
         }
         
         if (results.leftHandLandmarks) {
-            drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#e67e22', lineWidth: 2});
-            drawLandmarks(canvasCtx, results.leftHandLandmarks, {color: '#2ecc71', lineWidth: 1, radius: 3});
+            drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#fbbf24', lineWidth: 2});
+            drawLandmarks(canvasCtx, results.leftHandLandmarks, {color: '#34d399', lineWidth: 1, radius: 3});
         }
         
         if (results.rightHandLandmarks) {
-            drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#9b59b6', lineWidth: 2});
-            drawLandmarks(canvasCtx, results.rightHandLandmarks, {color: '#2ecc71', lineWidth: 1, radius: 3});
+            drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#c084fc', lineWidth: 2});
+            drawLandmarks(canvasCtx, results.rightHandLandmarks, {color: '#34d399', lineWidth: 1, radius: 3});
         }
 
         const hasilBIM = tekaAngkaBIM(
@@ -246,7 +309,7 @@ function onResults(results) {
 
     } else {
         statusMessage.innerText = "Sila pastikan badan/tangan anda kelihatan pada kamera.";
-        statusMessage.style.color = "#dc3545";
+        statusMessage.style.color = "#f87171";
         textOutput.innerText = "...";
     }
     canvasCtx.restore();
@@ -274,7 +337,7 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         videoElement.onloadedmetadata = function(e) {
             videoElement.play();
             statusMessage.innerText = "Kamera sedia. Sila lakukan isyarat.";
-            statusMessage.style.color = "#3498db";
+            statusMessage.style.color = "#38bdf8";
             
             async function hantarFrame() {
                 if (!videoElement.paused && !videoElement.ended) {
@@ -287,11 +350,11 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     })
     .catch(function(err) {
         statusMessage.innerText = "Gagal mengakses kamera: " + err.message;
-        statusMessage.style.color = "#dc3545";
+        statusMessage.style.color = "#f87171";
     });
 } else {
     statusMessage.innerText = "Pelayar anda tidak menyokong akses kamera.";
-    statusMessage.style.color = "#dc3545";
+    statusMessage.style.color = "#f87171";
 }
 </script>
 
