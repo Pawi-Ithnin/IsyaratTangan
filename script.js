@@ -124,7 +124,7 @@ function kenalPastiBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
 }
 
 // =================================================================
-// 2. INTEGRASI MEDIAPIPE (HANDS & POSE)
+// 2. INTEGRASI MEDIAPIPE (HANDS & POSE) - DIOPTIMUMKAN
 // =================================================================
 let letupanHasilKiri = null;
 let letupanHasilKanan = null;
@@ -135,7 +135,7 @@ const hands = new Hands({
 });
 hands.setOptions({
     maxNumHands: 2,
-    modelComplexity: 1,
+    modelComplexity: 0, // Ditetapkan kepada 0 supaya lebih ringan dan pantas
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
@@ -158,7 +158,7 @@ const pose = new Pose({
     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
 });
 pose.setOptions({
-    modelComplexity: 1,
+    modelComplexity: 0, // Ditetapkan kepada 0 untuk kurangkan beban CPU
     smoothLandmarks: true,
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
@@ -173,7 +173,7 @@ async function onFrame() {
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
 
-    // Hantar imej ke model Hands & Pose
+    // Hantar imej ke model Hands & Pose secara serentak
     await hands.send({ image: videoElement });
     await pose.send({ image: videoElement });
 
@@ -189,15 +189,15 @@ async function onFrame() {
     requestAnimationFrame(onFrame);
 }
 
-// Mulakan Kamera menggunakan MediaPipe Camera Utils
+// Mulakan Kamera (Resolusi dikurangkan kepada 320x240 untuk kelancaran)
 const camera = new Camera(videoElement, {
     onFrame: async () => {
         await onFrame();
     },
-    width: 640,
-    height: 480
+    width: 320,
+    height: 240
 });
 
 camera.start().then(() => {
     outputLabel.innerText = "Kamera Aktif. Sila mula membuat isyarat!";
-});}
+});
