@@ -25,49 +25,49 @@ function tekaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     let minX = Math.min(landmarks[5].x, landmarks[17].x);
     let maxX = Math.max(landmarks[5].x, landmarks[17].x);
     let ibuJariMelipatDiDepan = landmarks[4].x > minX && landmarks[4].x < maxX;
+    console.log({ telunjukTerbuka, tengahTerbuka, manisTerbuka, kelingkingTerbuka, ibuJariTerbuka });
 
     // -----------------------------------------------------------------
-    // LOGIK ABJAD BIM (A - E)
+    // LOGIK ABJAD BIM (A - E) - DIOPTIMUMKAN
     // -----------------------------------------------------------------
 
-    // Huruf A: Genggaman penuh dengan ibu jari diletakkan lurus di sisi jari lain (tidak melipat ke dalam tapak tangan)
+    // Huruf A: Genggaman penuh, ibu jari diletakkan di sisi (tidak melintang menutup jari)
     let ibuJariDiSisi = landmarks[4].x > landmarks[2].x && !ibuJariTerbuka;
-    if (!telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && ibuJariDiSisi) {
+    if (!telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && (ibuJariDiSisi || !ibuJariTerbuka)) {
         return "A";
     }
 
-    // Huruf B: Keempat-empat jari tegak lurus rapat ke atas, ibu jari melipat di tapak tangan
-    let jariRapat = Math.abs(landmarks[8].x - landmarks[20].x) / saizTangan < 0.6;
-    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka && jariRapat) {
+    // Huruf B: Empat jari tegak lurus ke atas, ibu jari melipat di tapak tangan
+    let jariRapat = Math.abs(landmarks[8].x - landmarks[20].x) / saizTangan < 0.7; // Dilonggarkan sedikit
+    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) {
         return "B";
     }
 
-    // Huruf C: Jari-jemari melengkung membentuk separuh bulatan (C-shape)
+    // Huruf C: Bentuk separuh bulatan (C-shape)
     let cShape = (landmarks[8].x > landmarks[4].x) && 
-                 (landmarks[8].y > landmarks[6].y && landmarks[8].y < landmarks[5].y);
+                 (landmarks[8].y >= landmarks[6].y); // Diubah kepada >= agar lebih mudah lepas
     if (cShape && !tengahTerbuka && !manisTerbuka) {
         return "C";
     }
 
-    // Huruf D: Telunjuk sahaja tegak ke atas, jari lain melengkung bertemu ibu jari membentuk gelung (O-shape)
-    let jariMembentukGelung = !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka;
-    let ibuJariBertemuKelingkingManis = Math.abs(landmarks[4].y - landmarks[16].y) / saizTangan < 0.2;
-    if (telunjukTerbuka && jariMembentukGelung && ibuJariBertemuKelingkingManis) {
+    // Huruf D: Telunjuk tegak ke atas, ibu jari & jari lain membentuk bulatan (O-shape)
+    let jarakIbuJariKeJariTengah = Math.abs(landmarks[4].x - landmarks[12].x) / saizTangan;
+    if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && jarakIbuJariKeJariTengah < 0.35) {
         return "D";
     }
 
-    // Huruf E: Semua jari melipat rapat ke bawah/tapak tangan dengan ibu jari melintang di bawah jari-jari
+    // Huruf E: Semua jari melipat ke bawah dengan ibu jari melintang di bawah jari telunjuk/tengah
     let semuaJariMelipat = !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka;
-    let ibuJariMelintangDiBawah = landmarks[4].y > landmarks[6].y && landmarks[4].y < landmarks[10].y;
-    if (semuaJariMelipat && ibuJariMelintangDiBawah) {
+    let ibuJariMelintang = landmarks[4].y >= landmarks[6].y; // Ibu jari berada di bawah buku lima
+    if (semuaJariMelipat && ibuJariMelintang) {
         return "E";
     }
 
     // -----------------------------------------------------------------
-    // LOGIK ANGKA BIM (1 - 10)
+    // 2. SEMAKAN ANGKA BIM (1 - 10)
     // -----------------------------------------------------------------
     
-    // Angka 1: Hanya telunjuk tegak, jari lain tutup
+    // Angka 1: Hanya telunjuk tegak
     if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariMelipatDiDepan) {
         return "1";
     }
@@ -77,38 +77,38 @@ function tekaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
         return "2";
     }
     
-    // Angka 3 & 8 (Ibu jari + Telunjuk + Tengah)
+    // Angka 3 & 8 (Ibu jari + Telunjuk + Tengah terbuka)
     if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
-        if (jarakIbuJariKeTelunjuk > 0.8) return "8"; // Bukaan ibu jari sangat lebar
+        if (jarakIbuJariKeTelunjuk > 0.8) return "8"; 
         return "3"; 
     }
     
-    // Angka 4 (4 jari terbuka, ibu jari melipat)
-    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) {
+    // Angka 4: 4 jari terbuka, ibu jari melipat di tapak tangan (jarak jari lebih terbuka berbanding B)
+    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka && !jariRapat) {
         return "4";
     }
 
-    // Angka 5 (Semua jari terbuka lebar termasuk ibu jari)
+    // Angka 5: Semua 5 jari terbuka lebar
     if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka) {
         return "5";
     }
 
-    // Angka 6 (Genggaman penuh + Ibu jari terbuka)
+    // Angka 6: Genggaman penuh + Ibu jari terbuka keluar
     if (ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
         return "6";
     }
 
-    // Angka 7 (Ibu jari + Telunjuk terbuka)
+    // Angka 7: Ibu jari + Telunjuk terbuka
     if (ibuJariTerbuka && telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
         return "7";
     }
 
-    // Angka 9 (Ibu jari + Telunjuk + Tengah + Manis terbuka)
+    // Angka 9: Ibu jari + Telunjuk + Tengah + Manis terbuka
     if (ibuJariTerbuka && telunjukTerbuka && tengahTerbuka && manisTerbuka && !kelingkingTerbuka) {
         return "9";
     }
     
-    // Angka 10 (Genggam penuh / ibu jari tertutup rapat)
+    // Angka 10: Genggaman penuh (jika bukan A atau E)
     if (!ibuJariTerbuka && !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka) {
         return "10 (Genggam & Goyang)";
     }
