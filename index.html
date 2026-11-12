@@ -63,13 +63,6 @@
             border: 1px solid var(--card-border);
             box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5),
                         0 0 30px rgba(56, 189, 248, 0.15);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .container:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6),
-                        0 0 40px rgba(56, 189, 248, 0.25);
         }
 
         #webcam {
@@ -157,7 +150,7 @@
 <body>
 
     <h1>Pengesan Bahasa Isyarat Malaysia (BIM)</h1>
-    <p>Gunakan isyarat tangan di zon bebas untuk Angka (1-10) atau zon dada untuk "SAYA".</p>
+    <p>Gunakan isyarat tangan untuk Abjad (A-E), Angka (1-10), atau zon dada untuk "SAYA".</p>
 
     <div class="container">
         <video id="webcam" autoplay playsinline></video>
@@ -177,8 +170,8 @@ const canvasCtx = canvasElement.getContext('2d');
 const textOutput = document.getElementById('text-output');
 const statusMessage = document.getElementById('status-message');
 
-// 1. LOGIK PEMETAAN ANGKA & PERKATAAN (BIM)
-function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
+// 1. LOGIK PEMETAAN ABJAD, ANGKA & PERKATAAN (BIM)
+function tekaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     let landmarks = rightHandLandmarks || leftHandLandmarks;
     
     if (!landmarks) return "...";
@@ -203,18 +196,17 @@ function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
                             (hujungTelunjuk.y >= sempadanAtas && hujungTelunjuk.y <= sempadanBawah);
 
         if (diKawasanDada) {
-            let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
-            let tengahTerbuka = landmarks[12].y < landmarks[10].y;
+            let telunjukTerbukaDada = landmarks[8].y < landmarks[6].y;
+            let tengahTerbukaDada = landmarks[12].y < landmarks[10].y;
             
-            if (telunjukTerbuka && !tengahTerbuka) {
+            if (telunjukTerbukaDada && !tengahTerbukaDada) {
                 return "SAYA";
             }
-            return "...";
         }
     }
 
     // =================================================================
-    // ZON 2: ZON BEBAS / NEUTRAL (Angka 1-10)
+    // ZON 2: ZON BEBAS / NEUTRAL (Abjad A-E & Angka 1-10)
     // =================================================================
     let telunjukTerbuka = landmarks[8].y < landmarks[6].y;
     let tengahTerbuka = landmarks[12].y < landmarks[10].y;
@@ -229,7 +221,40 @@ function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
     let ibuJariMelipatDiDepan = landmarks[4].x > minX && landmarks[4].x < maxX;
 
     // -----------------------------------------------------------------
-    // LOGIK ANGKA (1 - 10)
+    // A. LOGIK ABJAD BIM (A - E)
+    // -----------------------------------------------------------------
+    
+    // Huruf A: Genggaman penuh
+    if (!telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariTerbuka) {
+        return "A";
+    }
+
+    // Huruf B: 4 jari terbuka tegak dan rapat
+    let jariRapat = Math.abs(landmarks[8].x - landmarks[20].x) / saizTangan < 0.7;
+    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka && jariRapat) {
+        return "B";
+    }
+
+    // Huruf C: Bentuk separuh bulatan (C-shape)
+    let cShape = (landmarks[8].x > landmarks[4].x) && (landmarks[8].y >= landmarks[6].y);
+    if (cShape && !tengahTerbuka && !manisTerbuka) {
+        return "C";
+    }
+
+    // Huruf D: Telunjuk tegak, jari lain membentuk gelung
+    let jarakIbuJariKeJariTengah = Math.abs(landmarks[4].x - landmarks[12].x) / saizTangan;
+    if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && jarakIbuJariKeJariTengah < 0.35) {
+        return "D";
+    }
+
+    // Huruf E: Semua jari melipat dengan ibu jari melintang di bawah
+    let semuaJariMelipat = !telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka;
+    if (semuaJariMelipat && landmarks[4].y >= landmarks[6].y) {
+        return "E";
+    }
+
+    // -----------------------------------------------------------------
+    // B. LOGIK ANGKA BIM (1 - 10)
     // -----------------------------------------------------------------
     if (telunjukTerbuka && !tengahTerbuka && !manisTerbuka && !kelingkingTerbuka && !ibuJariMelipatDiDepan) {
         return "1";
@@ -244,7 +269,7 @@ function tekaAngkaBIM(leftHandLandmarks, rightHandLandmarks, poseLandmarks) {
         return "3"; 
     }
     
-    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka) {
+    if (telunjukTerbuka && tengahTerbuka && manisTerbuka && kelingkingTerbuka && !ibuJariTerbuka && !jariRapat) {
         return "4";
     }
 
@@ -300,7 +325,7 @@ function onResults(results) {
             drawLandmarks(canvasCtx, results.rightHandLandmarks, {color: '#34d399', lineWidth: 1, radius: 3});
         }
 
-        const hasilBIM = tekaAngkaBIM(
+        const hasilBIM = tekaBIM(
             results.leftHandLandmarks, 
             results.rightHandLandmarks, 
             results.poseLandmarks
