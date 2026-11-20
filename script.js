@@ -15,6 +15,7 @@ const resetBtn = document.getElementById('resetBtn');
 const SENARAI_ISYARAT = [
     {
         label: "HUJAN",
+        jenis: "gerakan",
         padan: (frames) => {
             if (frames.length < 3) return false;
             const awal = frames[0];
@@ -31,7 +32,77 @@ const SENARAI_ISYARAT = [
         }
     },
     {
+        label: "MAAF",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 4) return false;
+
+            const titikDada = [];
+            for (const f of frames) {
+                const tangan = f.tanganKananTitik || f.tanganKiriTitik;
+                if (!tangan) continue;
+
+                const diDada =
+                    Math.abs(tangan.x - f.tengahDadaX) < 0.15 &&
+                    Math.abs(tangan.y - f.tengahDadaY) < 0.13;
+
+                if (diDada) {
+                    titikDada.push(tangan);
+                }
+            }
+
+            if (titikDada.length < 4) return false;
+
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let tukarArahX = 0;
+            let tukarArahY = 0;
+            let prevDx = 0;
+            let prevDy = 0;
+
+            for (let i = 0; i < titikDada.length; i++) {
+                const p = titikDada[i];
+                minX = Math.min(minX, p.x);
+                maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y);
+                maxY = Math.max(maxY, p.y);
+
+                if (i > 0) {
+                    const dx = p.x - titikDada[i - 1].x;
+                    const dy = p.y - titikDada[i - 1].y;
+
+                    if (Math.abs(dx) > 0.008) {
+                        if (prevDx !== 0 && Math.sign(dx) !== Math.sign(prevDx)) {
+                            tukarArahX++;
+                        }
+                        prevDx = dx;
+                    }
+
+                    if (Math.abs(dy) > 0.008) {
+                        if (prevDy !== 0 && Math.sign(dy) !== Math.sign(prevDy)) {
+                            tukarArahY++;
+                        }
+                        prevDy = dy;
+                    }
+                }
+            }
+
+            const rentangX = maxX - minX;
+            const rentangY = maxY - minY;
+
+            // Pergerakan berulang/memutar di dada (ada sebaran X & Y dan pertukaran arah)
+            const adaPutaranAtauAyunan =
+                rentangX > 0.025 &&
+                rentangY > 0.025 &&
+                rentangX <= 0.11 &&
+                rentangY <= 0.13 &&
+                (tukarArahX + tukarArahY) >= 2;
+
+            return adaPutaranAtauAyunan;
+        }
+    },
+    {
         label: "MINTA",
+        jenis: "gerakan",
         padan: (frames) => {
             if (frames.length < 3) return false;
             const awal = frames[0];
@@ -50,46 +121,16 @@ const SENARAI_ISYARAT = [
                 y: terkini.tengahDadaY
             });
 
-            const gerakKeDada = (jarakAwalKeDada - jarakKiniKeDada) > 0.08;
-            const sampaiKawasanDada = jarakKiniKeDada < 0.22;
+            // Bermula agak jauh dari tengah dada dan bergerak masuk menghampiri dada
+            const gerakKeDada = jarakAwalKeDada > 0.16 && (jarakAwalKeDada - jarakKiniKeDada) > 0.08;
+            const sampaiKawasanDada = jarakKiniKeDada < 0.21;
 
             return gerakKeDada && sampaiKawasanDada;
         }
     },
     {
-        label: "MAAF",
-        padan: (frames) => {
-            if (frames.length < 3) return false;
-
-            let kiraDiDada = 0;
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-
-            for (const f of frames) {
-                const tangan = f.tanganKananTitik || f.tanganKiriTitik;
-                if (!tangan) continue;
-
-                const diDada =
-                    Math.abs(tangan.x - f.tengahDadaX) < 0.16 &&
-                    Math.abs(tangan.y - f.tengahDadaY) < 0.14;
-
-                if (diDada) {
-                    kiraDiDada++;
-                    minX = Math.min(minX, tangan.x);
-                    maxX = Math.max(maxX, tangan.x);
-                    minY = Math.min(minY, tangan.y);
-                    maxY = Math.max(maxY, tangan.y);
-                }
-            }
-
-            const rentangX = maxX - minX;
-            const rentangY = maxY - minY;
-            const gerakPutarDada = (rentangX > 0.035 && rentangX <= 0.09) || (rentangY > 0.035 && rentangY <= 0.12);
-
-            return kiraDiDada >= 3 && gerakPutarDada;
-        }
-    },
-    {
         label: "KITA",
+        jenis: "gerakan",
         padan: (frames) => {
             if (frames.length < 3) return false;
             const awal = frames[0];
@@ -114,6 +155,7 @@ const SENARAI_ISYARAT = [
     },
     {
         label: "MAKAN",
+        jenis: "gerakan",
         padan: (frames, jari) => {
             if (frames.length < 3) return false;
 
@@ -147,6 +189,7 @@ const SENARAI_ISYARAT = [
     },
     {
         label: "TERIMA KASIH",
+        jenis: "gerakan",
         padan: (frames) => {
             if (frames.length < 3) return false;
             const awal = frames[0];
@@ -157,19 +200,20 @@ const SENARAI_ISYARAT = [
             if (!awal.hidung || !tanganAwal || !tanganKini) return false;
 
             const dekatMulutDaguAwal =
-                Math.abs(tanganAwal.x - awal.hidung.x) < 0.16 &&
-                (tanganAwal.y - awal.hidung.y) > 0.02 &&
-                (tanganAwal.y - awal.hidung.y) < 0.24;
+                Math.abs(tanganAwal.x - awal.hidung.x) < 0.18 &&
+                (tanganAwal.y - awal.hidung.y) > 0.01 &&
+                (tanganAwal.y - awal.hidung.y) < 0.25;
 
             const gerakTurunAtauKeluar =
-                (tanganKini.y - tanganAwal.y) > 0.07 ||
-                Math.abs(tanganKini.x - tanganAwal.x) > 0.10;
+                (tanganKini.y - tanganAwal.y) > 0.06 ||
+                Math.abs(tanganKini.x - tanganAwal.x) > 0.09;
 
             return dekatMulutDaguAwal && gerakTurunAtauKeluar;
         }
     },
     {
         label: "SAYA",
+        jenis: "gerakan",
         padan: (frames) => {
             const terkini = frames[frames.length - 1];
             if (!terkini || !terkini.tanganKananTitik) return false;
@@ -182,41 +226,49 @@ const SENARAI_ISYARAT = [
     },
     {
         label: "1",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && !jari.ibuJari && jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking)
     },
     {
         label: "2",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && !jari.ibuJari && jari.telunjuk && jari.tengah && !jari.manis && !jari.kelingking)
     },
     {
         label: "4",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && !jari.ibuJari && jari.telunjuk && jari.tengah && jari.manis && jari.kelingking)
     },
     {
         label: "5",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && jari.ibuJari && jari.telunjuk && jari.tengah && jari.manis && jari.kelingking)
     },
     {
         label: "6",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && jari.ibuJari && !jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking)
     },
     {
         label: "7",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && jari.ibuJari && jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking)
     },
     {
         label: "9",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(jari && jari.ibuJari && jari.telunjuk && jari.tengah && jari.manis && !jari.kelingking)
     },
     {
         label: "8",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(
                 jari &&
@@ -230,6 +282,7 @@ const SENARAI_ISYARAT = [
     },
     {
         label: "3",
+        jenis: "angka",
         padan: (_frames, jari) =>
             Boolean(
                 jari &&
@@ -243,6 +296,7 @@ const SENARAI_ISYARAT = [
     },
     {
         label: "10",
+        jenis: "angka",
         padan: (frames, jari) => {
             if (!jari || frames.length < 3) return false;
             const tertutup = !jari.ibuJari && !jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking;
@@ -278,8 +332,8 @@ const SENARAI_ISYARAT = [
 const ISYARAT_DIBENARKAN = new Set(SENARAI_ISYARAT.map(item => item.label));
 allowedPillEl.innerText = `Set (${SENARAI_ISYARAT.length} isyarat)`;
 
-const WINDOW_SIZE = 5;
-const VOTE_BUFFER_SIZE = 3;
+const WINDOW_SIZE = 7;
+const VOTE_BUFFER_SIZE = 4;
 const frameWindow = [];
 const recentVotes = [];
 
@@ -348,16 +402,37 @@ function ekstrakCiriFrame(results) {
     };
 }
 
+function tanganSedangBergerak(frames) {
+    if (frames.length < 3) return false;
+    const awal = frames[0];
+    const terkini = frames[frames.length - 1];
+    const pAwal = awal.tanganKananTitik || awal.tanganKiriTitik;
+    const pKini = terkini.tanganKananTitik || terkini.tanganKiriTitik;
+    if (!pAwal || !pKini) return false;
+    return jarak(pAwal, pKini) > 0.06;
+}
+
 function kesanIsyaratDibenarkan(frames) {
     if (frames.length < 3) return "...";
     const terkini = frames[frames.length - 1];
     const jari = terkini ? terkini.jariAktif : null;
 
     for (const item of SENARAI_ISYARAT) {
-        if (item.padan(frames, jari)) {
+        if (item.jenis === "gerakan" && item.padan(frames, jari)) {
             return item.label;
         }
     }
+
+    if (tanganSedangBergerak(frames)) {
+        return "...";
+    }
+
+    for (const item of SENARAI_ISYARAT) {
+        if (item.jenis === "angka" && item.padan(frames, jari)) {
+            return item.label;
+        }
+    }
+
     return "...";
 }
 
