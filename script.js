@@ -10,7 +10,7 @@ const toggleBtn = document.getElementById('toggleBtn');
 const resetBtn = document.getElementById('resetBtn');
 
 // =====================================================================
-// KOLEKSI ISYARAT YANG DISOKONG (Termasuk HUJAN)
+// KOLEKSI ISYARAT YANG DISOKONG (Hanya isyarat ini dibenarkan keluar)
 // =====================================================================
 const SENARAI_ISYARAT = [
     {
@@ -24,7 +24,6 @@ const SENARAI_ISYARAT = [
 
             if (!tanganAwal || !tanganKini) return false;
 
-            // Bermula di kawasan atas/bahu dan bergerak turun ke bawah
             const mulaDiAtas = awal.hidung ? tanganAwal.y < (awal.hidung.y + 0.18) : tanganAwal.y < 0.55;
             const gerakTurun = (tanganKini.y - tanganAwal.y) > 0.09;
 
@@ -462,7 +461,7 @@ navigator.mediaDevices.getUserMedia({
         videoElement.srcObject = stream;
         videoElement.onloadedmetadata = () => {
             videoElement.play();
-            statusTextEl.innerText = "Kamera sedia. Cuba isyarat HUJAN.";
+            statusTextEl.innerText = "Kamera sedia. Buat isyarat dalam set.";
 
             async function gelungFrame() {
                 if (isRunning && !videoElement.paused && !videoElement.ended) {
