@@ -50,6 +50,73 @@ const SENARAI_ISYARAT = [
         }
     },
     {
+        label: "SEMUA",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 4) return false;
+
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let kiraTitik = 0;
+
+            for (const f of frames) {
+                const tangan = f.tanganKananTitik || f.tanganKiriTitik;
+                if (!tangan) continue;
+                kiraTitik++;
+                minX = Math.min(minX, tangan.x);
+                maxX = Math.max(maxX, tangan.x);
+                minY = Math.min(minY, tangan.y);
+                maxY = Math.max(maxY, tangan.y);
+            }
+
+            if (kiraTitik < 4) return false;
+
+            const rentangX = maxX - minX;
+            const rentangY = maxY - minY;
+            return rentangX > 0.14 && rentangY > 0.06;
+        }
+    },
+    {
+        label: "SAMPAI",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 4) return false;
+            const awal = frames[0];
+            const pertengahan = frames[Math.floor(frames.length / 2)];
+            const terkini = frames[frames.length - 1];
+
+            const pAwal = awal.tanganKananTitik || awal.tanganKiriTitik;
+            const pTengah = pertengahan.tanganKananTitik || pertengahan.tanganKiriTitik;
+            const pKini = terkini.tanganKananTitik || terkini.tanganKiriTitik;
+
+            if (!pAwal || !pTengah || !pKini) return false;
+
+            const gerakHampiri = jarak(pAwal, pTengah) > 0.055;
+            const berhentiDiSasaran = jarak(pTengah, pKini) < 0.035;
+
+            return gerakHampiri && berhentiDiSasaran;
+        }
+    },
+    {
+        label: "WAKTU",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 3) return false;
+            const awal = frames[0];
+            const terkini = frames[frames.length - 1];
+
+            const jariTitik = terkini.tanganKananTitik || terkini.tanganKiriTitik;
+            const pergelangan = terkini.pergelanganKanan || terkini.pergelanganKiri;
+            const jariAwal = awal.tanganKananTitik || awal.tanganKiriTitik;
+
+            if (!jariTitik || !pergelangan || !jariAwal) return false;
+
+            const dekatPergelangan = jarak(jariTitik, pergelangan) < 0.14;
+            const adaGerakMenuju = jarak(jariAwal, jariTitik) > 0.04;
+
+            return dekatPergelangan && adaGerakMenuju;
+        }
+    },
+    {
         label: "BOLEH",
         jenis: "gerakan",
         padan: (frames) => {
@@ -481,6 +548,8 @@ function ekstrakCiriFrame(results) {
     const bahuKanan = pose ? pose[12] : null;
     const tanganKananTitik = kanan ? kanan[8] : (pose ? pose[16] : null);
     const tanganKiriTitik = kiri ? kiri[8] : (pose ? pose[15] : null);
+    const pergelanganKanan = kanan ? kanan[0] : (pose ? pose[16] : null);
+    const pergelanganKiri = kiri ? kiri[0] : (pose ? pose[15] : null);
 
     const tengahDadaX = (bahuKiri && bahuKanan) ? (bahuKiri.x + bahuKanan.x) / 2 : 0.5;
     const tengahDadaY = (bahuKiri && bahuKanan) ? (bahuKiri.y + bahuKanan.y) / 2 + 0.12 : 0.6;
@@ -494,6 +563,8 @@ function ekstrakCiriFrame(results) {
         tengahDadaY,
         tanganKananTitik,
         tanganKiriTitik,
+        pergelanganKanan,
+        pergelanganKiri,
         jariAktif
     };
 }
@@ -632,7 +703,7 @@ navigator.mediaDevices.getUserMedia({
         videoElement.srcObject = stream;
         videoElement.onloadedmetadata = () => {
             videoElement.play();
-            statusTextEl.innerText = "Kamera sedia. Cuba isyarat dalam set.";
+            statusTextEl.innerText = "Kamera sedia. Cuba WAKTU, SEMUA atau SAMPAI.";
 
             async function gelungFrame() {
                 if (isRunning && !videoElement.paused && !videoElement.ended) {
