@@ -32,6 +32,60 @@ const SENARAI_ISYARAT = [
         }
     },
     {
+        label: "JANGAN",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 3) return false;
+            const awal = frames[0];
+            const terkini = frames[frames.length - 1];
+            const tanganAwal = awal.tanganKananTitik || awal.tanganKiriTitik;
+            const tanganKini = terkini.tanganKananTitik || terkini.tanganKiriTitik;
+
+            if (!tanganAwal || !tanganKini) return false;
+
+            const gerakSisiTegas = Math.abs(tanganKini.x - tanganAwal.x) > 0.12;
+            const bukanDiMulut = awal.hidung ? (tanganAwal.y - awal.hidung.y) > 0.08 : true;
+
+            return gerakSisiTegas && bukanDiMulut;
+        }
+    },
+    {
+        label: "BOLEH",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 4) return false;
+
+            const titik = [];
+            for (const f of frames) {
+                const tangan = f.tanganKananTitik || f.tanganKiriTitik;
+                if (tangan) titik.push(tangan);
+            }
+            if (titik.length < 4) return false;
+
+            let minY = Infinity, maxY = -Infinity;
+            let tukarArahY = 0;
+            let prevDy = 0;
+
+            for (let i = 0; i < titik.length; i++) {
+                minY = Math.min(minY, titik[i].y);
+                maxY = Math.max(maxY, titik[i].y);
+
+                if (i > 0) {
+                    const dy = titik[i].y - titik[i - 1].y;
+                    if (Math.abs(dy) > 0.01) {
+                        if (prevDy !== 0 && Math.sign(dy) !== Math.sign(prevDy)) {
+                            tukarArahY++;
+                        }
+                        prevDy = dy;
+                    }
+                }
+            }
+
+            const rentangY = maxY - minY;
+            return rentangY > 0.035 && rentangY <= 0.16 && tukarArahY >= 2;
+        }
+    },
+    {
         label: "MAAF",
         jenis: "gerakan",
         padan: (frames) => {
@@ -89,7 +143,6 @@ const SENARAI_ISYARAT = [
             const rentangX = maxX - minX;
             const rentangY = maxY - minY;
 
-            // Pergerakan berulang/memutar di dada (ada sebaran X & Y dan pertukaran arah)
             const adaPutaranAtauAyunan =
                 rentangX > 0.025 &&
                 rentangY > 0.025 &&
@@ -121,11 +174,54 @@ const SENARAI_ISYARAT = [
                 y: terkini.tengahDadaY
             });
 
-            // Bermula agak jauh dari tengah dada dan bergerak masuk menghampiri dada
             const gerakKeDada = jarakAwalKeDada > 0.16 && (jarakAwalKeDada - jarakKiniKeDada) > 0.08;
             const sampaiKawasanDada = jarakKiniKeDada < 0.21;
 
             return gerakKeDada && sampaiKawasanDada;
+        }
+    },
+    {
+        label: "AMBIL",
+        jenis: "gerakan",
+        padan: (frames, jari) => {
+            if (frames.length < 3) return false;
+            const awal = frames[0];
+            const terkini = frames[frames.length - 1];
+            const tanganAwal = awal.tanganKananTitik || awal.tanganKiriTitik;
+            const tanganKini = terkini.tanganKananTitik || terkini.tanganKiriTitik;
+
+            if (!tanganAwal || !tanganKini) return false;
+
+            const jarakAwal = jarak(tanganAwal, { x: awal.tengahDadaX, y: awal.tengahDadaY });
+            const jarakKini = jarak(tanganKini, { x: terkini.tengahDadaX, y: terkini.tengahDadaY });
+            const gerakTarikKeDalam = (jarakAwal - jarakKini) > 0.06 && jarakAwal > 0.13;
+
+            const jariTidakTerbukaPenuh = jari
+                ? !(jari.ibuJari && jari.telunjuk && jari.tengah && jari.manis && jari.kelingking)
+                : true;
+
+            return gerakTarikKeDalam && jariTidakTerbukaPenuh;
+        }
+    },
+    {
+        label: "AWAK",
+        jenis: "gerakan",
+        padan: (frames) => {
+            if (frames.length < 3) return false;
+            const awal = frames[0];
+            const terkini = frames[frames.length - 1];
+            const tanganAwal = awal.tanganKananTitik || awal.tanganKiriTitik;
+            const tanganKini = terkini.tanganKananTitik || terkini.tanganKiriTitik;
+
+            if (!tanganAwal || !tanganKini) return false;
+
+            const jarakAwal = jarak(tanganAwal, { x: awal.tengahDadaX, y: awal.tengahDadaY });
+            const jarakKini = jarak(tanganKini, { x: terkini.tengahDadaX, y: terkini.tengahDadaY });
+
+            const gerakMenjauhKeDepan = (jarakKini - jarakAwal) > 0.075 && jarakKini > 0.16;
+            const bukanGerakTurunHujan = (tanganKini.y - tanganAwal.y) < 0.08;
+
+            return gerakMenjauhKeDepan && bukanGerakTurunHujan;
         }
     },
     {
@@ -536,7 +632,7 @@ navigator.mediaDevices.getUserMedia({
         videoElement.srcObject = stream;
         videoElement.onloadedmetadata = () => {
             videoElement.play();
-            statusTextEl.innerText = "Kamera sedia. Buat isyarat dalam set.";
+            statusTextEl.innerText = "Kamera sedia. Cuba isyarat dalam set.";
 
             async function gelungFrame() {
                 if (isRunning && !videoElement.paused && !videoElement.ended) {
