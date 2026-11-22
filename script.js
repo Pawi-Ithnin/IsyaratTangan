@@ -371,7 +371,7 @@ const SENARAI_ISYARAT = [
         label: "AWAK",
         jenis: "gerakan",
         padan: (frames) => {
-            if (frames.length < 4) return false;
+            if (frames.length < 3) return false;
             const awal = frames[Math.max(0, frames.length - 6)];
             const terkini = frames[frames.length - 1];
             const s = skala(terkini);
@@ -382,11 +382,22 @@ const SENARAI_ISYARAT = [
 
             const jarakAwal = jarak(tanganAwal, { x: awal.tengahDadaX, y: awal.tengahDadaY });
             const jarakKini = jarak(tanganKini, { x: terkini.tengahDadaX, y: terkini.tengahDadaY });
+            const anjakanTitik = jarak(tanganAwal, tanganKini);
 
-            const gerakMenjauhKeDepan = (jarakKini - jarakAwal) > s * 0.40 && jarakKini > s * 0.78;
-            const bukanGerakTurunHujan = (tanganKini.y - tanganAwal.y) < s * 0.34;
+            // Terima sama ada menjauh dari dada ATAU ada anjakan jelas ke depan/sisi
+            const adaGerakKeDepan =
+                ((jarakKini - jarakAwal) > s * 0.24 && jarakKini > s * 0.55) ||
+                (anjakanTitik > s * 0.34 && (jarakKini - jarakAwal) > s * 0.12);
 
-            return gerakMenjauhKeDepan && bukanGerakTurunHujan;
+            // Elak keliru dengan HUJAN yang bermula tinggi dan jatuh menegak jauh
+            const bukanHujan = !(
+                awal.hidung &&
+                tanganAwal.y < awal.hidung.y + s * 0.55 &&
+                (tanganKini.y - tanganAwal.y) > s * 0.45 &&
+                Math.abs(tanganKini.x - tanganAwal.x) < s * 0.30
+            );
+
+            return adaGerakKeDepan && bukanHujan;
         }
     },
     {
