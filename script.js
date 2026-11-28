@@ -28,14 +28,68 @@ function licinTitik(prev, curr, alpha = 0.45) {
 }
 
 // =====================================================================
-// KOLEKSI ISYARAT YANG DISOKONG (Angka sahaja)
+// KOLEKSI ISYARAT YANG DISOKONG (Angka 1–10 & Huruf A–E)
 // =====================================================================
 const SENARAI_ISYARAT = [
+    // --- HURUF A–E ---
+    {
+        label: "A",
+        jenis: "huruf",
+        padan: (_frames, jari) => {
+            if (!jari) return false;
+            const empatJariTutup = !jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking;
+            const ibuJariDiSisi = !jari.ibuJari && jari.jarakIbuJariKeKelingking > 0.55;
+            return empatJariTutup && ibuJariDiSisi;
+        }
+    },
+    {
+        label: "B",
+        jenis: "huruf",
+        padan: (_frames, jari) => {
+            if (!jari) return false;
+            const empatJariTegak = jari.telunjuk && jari.tengah && jari.manis && jari.kelingking;
+            const jariRapat = jari.jarakTelunjukKeKelingking < 0.78;
+            const ibuJariDilipat = !jari.ibuJari;
+            return empatJariTegak && jariRapat && ibuJariDilipat;
+        }
+    },
+    {
+        label: "C",
+        jenis: "huruf",
+        padan: (_frames, jari) => {
+            if (!jari) return false;
+            const bukanGenggamPenuh = jari.bukaanIbuJariTelunjuk > 0.55 && jari.bukaanIbuJariTelunjuk < 1.35;
+            const jariMelengkung = !jari.tengah && !jari.manis && !jari.kelingking;
+            return bukanGenggamPenuh && jariMelengkung;
+        }
+    },
+    {
+        label: "D",
+        jenis: "huruf",
+        padan: (_frames, jari) => {
+            if (!jari) return false;
+            const hanyaTelunjukTegak = jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking;
+            const ibuJariDekatTengah = jari.jarakIbuJariKeTengah < 0.72;
+            return hanyaTelunjukTegak && ibuJariDekatTengah;
+        }
+    },
+    {
+        label: "E",
+        jenis: "huruf",
+        padan: (_frames, jari) => {
+            if (!jari) return false;
+            const semuaJariTurun = !jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking;
+            const ibuJariDiBawah = !jari.ibuJari && jari.ibuJariDiBawahTelunjuk;
+            return semuaJariTurun && ibuJariDiBawah;
+        }
+    },
+
+    // --- ANGKA 1–10 ---
     {
         label: "1",
         jenis: "angka",
         padan: (_frames, jari) =>
-            Boolean(jari && !jari.ibuJari && jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking)
+            Boolean(jari && !jari.ibuJari && jari.telunjuk && !jari.tengah && !jari.manis && !jari.kelingking && jari.jarakIbuJariKeTengah >= 0.72)
     },
     {
         label: "2",
@@ -47,7 +101,7 @@ const SENARAI_ISYARAT = [
         label: "4",
         jenis: "angka",
         padan: (_frames, jari) =>
-            Boolean(jari && !jari.ibuJari && jari.telunjuk && jari.tengah && jari.manis && jari.kelingking)
+            Boolean(jari && !jari.ibuJari && jari.telunjuk && jari.tengah && jari.manis && jari.kelingking && jari.jarakTelunjukKeKelingking >= 0.78)
     },
     {
         label: "5",
@@ -138,7 +192,7 @@ const SENARAI_ISYARAT = [
 ];
 
 const ISYARAT_DIBENARKAN = new Set(SENARAI_ISYARAT.map(item => item.label));
-allowedPillEl.innerText = `Set (${SENARAI_ISYARAT.length} angka)`;
+allowedPillEl.innerText = `Set (${SENARAI_ISYARAT.length} isyarat)`;
 
 const WINDOW_SIZE = 10;
 const VOTE_BUFFER_SIZE = 7;
@@ -173,6 +227,10 @@ function analisaJari(hand) {
         (jarakHujungIbuJariKePangkalKelingking > 0.74 || jarakHujungIbuJariKePangkalTelunjuk > 0.44);
 
     const bukaanIbuJariTelunjuk = jarak(hand[4], hand[8]) / saizTapak;
+    const jarakIbuJariKeKelingking = jarak(hand[4], hand[20]) / saizTapak;
+    const jarakTelunjukKeKelingking = jarak(hand[8], hand[20]) / saizTapak;
+    const jarakIbuJariKeTengah = jarak(hand[4], hand[12]) / saizTapak;
+    const ibuJariDiBawahTelunjuk = hand[4].y > hand[6].y - 0.015;
 
     return {
         ibuJari,
@@ -181,6 +239,10 @@ function analisaJari(hand) {
         manis,
         kelingking,
         bukaanIbuJariTelunjuk,
+        jarakIbuJariKeKelingking,
+        jarakTelunjukKeKelingking,
+        jarakIbuJariKeTengah,
+        ibuJariDiBawahTelunjuk,
         pusatTangan: hand[9]
     };
 }
@@ -224,7 +286,7 @@ function kesanIsyaratDibenarkan(frames) {
     if (!jari) return "...";
 
     for (const item of SENARAI_ISYARAT) {
-        if (item.jenis === "angka" && item.padan(frames, jari)) {
+        if (item.padan(frames, jari)) {
             return item.label;
         }
     }
@@ -298,7 +360,7 @@ function onResults(results) {
 
     const ciri = ekstrakCiriFrame(results);
     if (ciri && ciri.jariAktif) {
-        statusTextEl.innerText = "Mengesan angka 1–10...";
+        statusTextEl.innerText = "Mengesan angka 1–10 & huruf A–E...";
         frameWindow.push(ciri);
         if (frameWindow.length > WINDOW_SIZE) {
             frameWindow.shift();
@@ -306,7 +368,7 @@ function onResults(results) {
         const mentah = kesanIsyaratDibenarkan(frameWindow);
         liveSignEl.innerText = tapisIsyaratDibenarkan(mentah, now);
     } else {
-        statusTextEl.innerText = "Tunjukkan tangan ke kamera untuk angka 1–10.";
+        statusTextEl.innerText = "Tunjukkan tangan ke kamera untuk angka 1–10 atau A–E.";
         if (now >= holdUntilTime) {
             displayedSign = "...";
             liveSignEl.innerText = "...";
@@ -363,7 +425,7 @@ navigator.mediaDevices.getUserMedia({
                 canvasElement.height = videoElement.videoHeight;
             }
             videoElement.play();
-            statusTextEl.innerText = "Kamera sedia. Cuba isyarat angka 1–10.";
+            statusTextEl.innerText = "Kamera sedia. Cuba angka 1–10 atau huruf A–E.";
 
             async function gelungFrame() {
                 if (isRunning && !videoElement.paused && !videoElement.ended) {
@@ -377,5 +439,3 @@ navigator.mediaDevices.getUserMedia({
     .catch((err) => {
         statusTextEl.innerText = "Gagal akses kamera: " + err.message;
     });
-
-```
