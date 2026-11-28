@@ -1,14 +1,3 @@
-Baik, kita buang semua isyarat perkataan (`gerakan`) dan kekalkan hanya **angka (`1`–`10`)** dalam `SENARAI_ISYARAT`, sambil kemas kini fungsi pengesanan supaya fokus tepat pada angka sahaja.
-
-### Perubahan Utama pada Skrip
-
-* **Hanya isyarat `angka` (`1`–`10`):** Semua entri `gerakan` (`MAAF`, `SAYA`, `TERIMA KASIH`, `MAKAN`, `HUJAN`, `JANGAN`, `SEMUA`, `SAMPAI`, `WAKTU`, `BOLEH`, `MINTA`, `AMBIL`, `AWAK`, `KITA`) dibuang daripada `SENARAI_ISYARAT`.
-* **Semakan angka lebih kemas:** `kesanIsyaratDibenarkan` terus menyemak padanan `angka` tanpa penapis `tanganSedangBergerak` yang menyekat angka ketika tangan sedikit beralih.
-* **Mesra kamera & saiz kanvas:** Saiz `canvasElement` diselaraskan mengikut `videoElement.videoWidth` dan `videoElement.videoHeight` bila metadata video dimuatkan.
-
-### Kod Penuh (`app.js`) — Angka Sahaja
-
-```javascript
 const videoElement = document.getElementById('webcam');
 const canvasElement = document.getElementById('output_canvas');
 const canvasCtx = canvasElement.getContext('2d');
